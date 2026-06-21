@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ProTiles by dnezero</title>
+    <style>
+        :root { --b: #000; --w: #fff; --a: #fff; --m: #ff416c; }
+        * { box-sizing: border-box; touch-action: none; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--b); font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; color: var(--w); user-select: none; -webkit-user-select: none; }
+        #g { position: relative; width: 100vw; height: 100vh; max-width: 480px; background: var(--b); overflow: hidden; border-left: 1px solid #111; border-right: 1px solid #111; }
+        #fps { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; color: #666; z-index: 30; pointer-events: none; }
+        
+        #p-btn { position: absolute; top: 10px; left: 10px; font-size: 0.75rem; border: 1px solid #333; padding: 4px 10px; cursor: pointer; z-index: 35; display: none; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); letter-spacing: 1px; transition: border-color 0.2s, color 0.2s; }
+        #p-btn:hover { border-color: var(--w); }
+
+        .l-c { display: flex; width: 100%; height: 100%; }
+        .l { flex: 1; height: 100%; border-right: 1px solid #111; position: relative; }
+        .l:last-child { border-right: none; }
+        .l.act { background: linear-gradient(to top, rgba(255,255,255,0.1), transparent); }
+        .t-w { position: absolute; width: 100%; padding: 4px; transition: transform .1s, opacity .15s; }
+        .t { width: 100%; height: 100%; background: var(--w); border-radius: 4px; }
+        .t-w.hit { opacity: 0; transform: scale(0.9) translateY(-10px); pointer-events: none; }
+        .v { position: absolute; top: 40px; width: 100%; text-align: center; z-index: 10; pointer-events: none; }
+        #scr { font-size: 4rem; font-weight: 900; letter-spacing: -2px; }
+        .h { font-size: 0.8rem; opacity: 0.4; margin-top: 4px; letter-spacing: 2px; }
+        #p { position: absolute; bottom: 140px; width: 100%; text-align: center; font-size: 1.2rem; font-weight: bold; z-index: 10; pointer-events: none; display: none; letter-spacing: 1px; }
+        .k-i { position: absolute; bottom: 0; width: 100%; height: 65px; display: flex; border-top: 2px dashed rgba(255,255,255,0.1); pointer-events: none; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
+        .k { flex: 1; display: flex; justify-content: center; align-items: center; font-size: 1rem; color: #333; transition: color 0.1s; }
+        .k.act { color: var(--a); font-weight: bold; text-shadow: 0 0 8px var(--a); }
+        
+        .s { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--b); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
+        .hidden { display: none !important; }
+        #s-txt, .m-title { font-size: 2rem; font-weight: bold; letter-spacing: 4px; text-transform: uppercase; }
+        
+        button, .m-btn { background: linear-gradient(to right, var(--a) 50%, transparent 50%); background-size: 200% 100%; background-position: right center; border: 1px solid var(--w); color: var(--w); padding: 12px 0; width: 220px; font-family: monospace; font-size: 1rem; cursor: pointer; margin-top: 20px; letter-spacing: 2px; transition: color 0.2s, background-position 0.2s, border-color 0.2s; position: relative; text-align: center; display: inline-block; }
+        button:hover, .m-btn:hover { background-position: left center; color: var(--b); }
+        button.holding { animation: fill 5s linear forwards; color: var(--b); }
+        
+        .sub-btn { border-color: #444; color: #888; background: transparent; }
+        .sub-btn:hover { border-color: var(--w); color: var(--w); background: transparent; }
+
+        .cfg-container { width: 80%; max-width: 300px; display: flex; flex-direction: column; gap: 10px; margin-top: 25px; }
+        .cfg-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; letter-spacing: 1px; }
+        .cfg-key { background: transparent; border: 1px solid #333; color: var(--w); padding: 6px 12px; min-width: 90px; text-align: center; cursor: pointer; font-family: monospace; transition: border-color 0.2s; }
+        .cfg-key.waiting { border-color: var(--m); color: var(--m); animation: pulse 1s infinite alternate; }
+
+        .cred { position: absolute; bottom: 20px; font-size: 0.65rem; color: #444; text-align: center; letter-spacing: 1px; width: 100%; pointer-events: auto; }
+        .cred a { color: #666; text-decoration: none; border-bottom: 1px dashed #333; }
+        .cred a:hover { color: var(--w); border-bottom-color: var(--w); }
+
+        @keyframes fill { from { background-position: right center; } to { background-position: left center; } }
+        @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div id="g">
+        <div id="p-btn">PAUSE</div>
+        <div id="fps">FPS: --</div>
+        <div class="v">
+            <div id="scr">0</div>
+            <div class="h">BEST <span id="hsc">0</span></div>
+        </div>
+        <div id="p"></div>
+        <div class="l-c" id="lanes">
+            <div class="l" data-i="0"></div><div class="l" data-i="1"></div>
+            <div class="l" data-i="2"></div><div class="l" data-i="3"></div>
+        </div>
+        <div class="k-i">
+            <div class="k" id="k0">-</div><div class="k" id="k1">-</div>
+            <div class="k" id="k2">-</div><div class="k" id="k3">-</div>
+        </div>
+
+        <div id="s-out" class="s">
+            <div id="s-txt">PROTILES</div>
+            <button id="btn">START</button>
+            <button id="cfg-open-btn" class="sub-btn">KEYBINDS</button>
+            <div class="cred">BY DNEZERO | <a href="https://github.com" target="_blank">GITHUB</a></div>
+        </div>
+
+        <div id="p-out" class="s hidden" style="z-index: 40; background: rgba(0,0,0,0.9);">
+            <div class="m-title">PAUSED</div>
+            <div id="p-resume-btn" class="m-btn">RESUME</div>
+            <div id="p-restart-btn" class="m-btn">RESTART</div>
+            <div id="p-cfg-btn" class="m-btn sub-btn">KEYBINDS</div>
+        </div>
+
+        <div id="st-out" class="s hidden" style="z-index: 50;">
+            <div class="m-title">KEYBINDS</div>
+            <div class="cfg-container">
+                <div class="cfg-row"><span>LANE 1</span><div class="cfg-key" data-bind="lane0"></div></div>
+                <div class="cfg-row"><span>LANE 2</span><div class="cfg-key" data-bind="lane1"></div></div>
+                <div class="cfg-row"><span>LANE 3</span><div class="cfg-key" data-bind="lane2"></div></div>
+                <div class="cfg-row"><span>LANE 4</span><div class="cfg-key" data-bind="lane3"></div></div>
+                <div class="cfg-row"><span>START</span><div class="cfg-key" data-bind="start"></div></div>
+                <div class="cfg-row"><span>PAUSE</span><div class="cfg-key" data-bind="pause"></div></div>
+            </div>
+            <div id="cfg-save-btn" class="m-btn">SAVE & CLOSE</div>
+        </div>
+    </div>
+
+    <script>
+        const TH = 160;
+        const elLanes = document.getElementById('lanes'), elScr = document.getElementById('scr'), elHsc = document.getElementById('hsc'), elFps = document.getElementById('fps'), elPbtn = document.getElementById('p-btn');
+        const elPop = document.getElementById('p'), elSout = document.getElementById('s-out'), elStxt = document.getElementById('s-txt'), elBtn = document.getElementById('btn');
+        const elPout = document.getElementById('p-out'), elStout = document.getElementById('st-out'), elCfgSave = document.getElementById('cfg-save-btn');
+        const lanes = Array.from(elLanes.children), keys = [0,1,2,3].map(i => document.getElementById(`k${i}`));
+
+        let H, LINE, score = 0, hi = localStorage.getItem('t_hi') || 0, active = false, isPaused = false, spd = 1, tiles = [], loop, pTmo;
+        let isAuto = false, usedAuto = false, holdTmo, readyToDie = false;
+        let menuContext = 'main';
+        
+        let fCnt = 0, lastSmp = performance.now(), lastTick = performance.now();
+
+        let BINDS = JSON.parse(localStorage.getItem('t_binds')) || {
+            lane0: '1', lane1: '2', lane2: '3', lane3: '4', pause: 'p', start: ' '
+        };
+        let activeListenTarget = null;
+
+        const resize = () => { H = window.innerHeight; LINE = H - 65; };
+        window.addEventListener('resize', resize); resize();
+        elHsc.textContent = hi;
+
+        // this was written with one hand, wonder why? :P
+
+        const formatKeyDisplay = (val) => {
+            if (val === ' ') return 'SPACE';
+            return val.toUpperCase();
+        };
+
+        const updateKeyLabels = () => {
+            for(let i = 0; i < 4; i++) {
+                keys[i].textContent = formatKeyDisplay(BINDS[`lane${i}`]);
+            }
+        };
+        updateKeyLabels();
+
+        const setup = () => {
+            clearInterval(loop);
+            score = 0; spd = 320; isPaused = false;
+            tiles.forEach(t => t.e.remove()); tiles = [];
+            elScr.textContent = 0; elSout.classList.add('hidden'); elPout.classList.add('hidden');
+            elPbtn.style.display = 'block'; active = true;
+            
+            if (isAuto) {
+                usedAuto = true;
+                readyToDie = false;
+                setTimeout(() => { readyToDie = true; }, 400); 
+            } else {
+                usedAuto = false;
+                readyToDie = false;
+            }
+
+            spawn(-TH); spawn(-TH * 2);
+            lastSmp = performance.now(); lastTick = performance.now(); fCnt = 0;
+            loop = setInterval(tick, 0);
+        };
+
+        const spawn = (yOffset) => {
+            const i = Math.floor(Math.random() * 4), e = document.createElement('div');
+            e.className = 't-w'; e.style.height = `${TH}px`;
+            e.innerHTML = '<div class="t"></div>';
+            let y = tiles.length ? Math.min(...tiles.map(t => t.y)) - TH : (yOffset ?? -TH);
+            e.style.top = `${y}px`; lanes[i].appendChild(e);
+            tiles.push({ e, i, y, hit: false });
+        };
+
+        const togglePause = () => {
+            if (!active) return;
+            isPaused = !isPaused;
+            if (isPaused) {
+                elPout.classList.remove('hidden');
+            } else {
+                elPout.classList.add('hidden');
+                lastTick = performance.now();
+            }
+        };
+
+        const tick = () => {
+            const now = performance.now();
+            const dt = (now - lastTick) / 1000; 
+            lastTick = now;
+            fCnt++;
+
+            const telemetryDelta = now - lastSmp;
+            if (telemetryDelta >= 500) {
+                const currentFps = Math.round((fCnt * 1000) / telemetryDelta);
+                elFps.textContent = isAuto ? `AUTO | FPS: ${currentFps}` : `FPS: ${currentFps}`;
+                fCnt = 0; lastSmp = now;
+            }
+
+            if (!active || isPaused) return;
+
+            const step = spd * dt;
+            for (let i = 0; i < tiles.length; i++) {
+                let t = tiles[i];
+                let oldY = t.y;
+                t.y += step; 
+                t.e.style.top = `${t.y}px`;
+                
+                if (isAuto && !t.hit && (oldY + TH < LINE) && (t.y + TH >= LINE)) {
+                    lanes[t.i].classList.add('act'); keys[t.i].classList.add('act');
+                    setTimeout(() => { lanes[t.i].classList.remove('act'); keys[t.i].classList.remove('act'); }, 60);
+                    processInput(t.i);
+                }
+                
+                if (!t.hit && t.y > H) {
+                    if (isAuto) {
+                        processInput(t.i);
+                    } else {
+                        return fail(t.i);
+                    }
+                }
+            }
+            
+            while (tiles.length && tiles[0].y > H) { tiles[0].e.remove(); tiles.shift(); }
+            while ((tiles.length ? Math.min(...tiles.map(t => t.y)) : 0) > -TH * 2) spawn();
+        };
+
+        const processInput = (laneIdx) => {
+            if (!active || isPaused) return;
+            const t = tiles.filter(t => t.i === laneIdx && !t.hit).sort((a,b) => b.y - a.y)[0];
+            if (t && (isAuto || ((t.y + TH) > 100 && t.y < H))) {
+                const diff = Math.abs((t.y + TH) - LINE), pts = diff <= 25 ? 4 : diff <= 65 ? 3 : diff <= 130 ? 2 : 1;
+                const meta = [['PERFECT','#00f2fe'],['GREAT','#00e5ff'],['GOOD','#ffeb3b'],['EARLY','#ff9800']][4 - pts];
+                
+                if (!isAuto) {
+                    clearTimeout(pTmo); elPop.textContent = meta[0]; elPop.style.color = meta[1]; elPop.style.display = 'block';
+                    pTmo = setTimeout(() => elPop.style.display = 'none', 250);
+                }
+
+                t.hit = true; t.e.classList.add('hit'); score += isAuto ? 4 : pts; elScr.textContent = score;
+                spd = 320 + (score * 2.5);
+            } else if (!isAuto) fail(laneIdx);
+        };
+
+        const fail = (i) => {
+            active = false; isPaused = false; clearInterval(loop); isAuto = false; readyToDie = false;
+            elPbtn.style.display = 'none';
+            lanes.forEach((l, idx) => { l.classList.remove('act'); keys[idx].classList.remove('act'); });
+            if (i !== null && i >= 0) { lanes[i].style.background = 'rgba(255,65,108,0.2)'; setTimeout(() => lanes[i].style.background='', 200); }
+            
+            if (!usedAuto && score > hi) localStorage.setItem('t_hi', hi = score);
+            
+            elHsc.textContent = hi; elStxt.innerHTML = usedAuto ? `AUTO: ${score}` : `SCORE: ${score}`;
+            elSout.classList.remove('hidden');
+            elPout.classList.add('hidden');
+            
+            loop = setInterval(() => {
+                fCnt++; const now = performance.now(); const d = now - lastSmp;
+                if (d >= 500) { elFps.textContent = `FPS: ${Math.round((fCnt * 1000) / d)}`; fCnt = 0; lastSmp = now; }
+                lastTick = now;
+            }, 0);
+        };
+
+        elPbtn.addEventListener('mousedown', (e) => { e.stopPropagation(); e.preventDefault(); togglePause(); });
+        elPbtn.addEventListener('touchstart', (e) => { e.stopPropagation(); e.preventDefault(); togglePause(); }, { passive: false });
+        document.getElementById('p-resume-btn').addEventListener('click', togglePause);
+        document.getElementById('p-restart-btn').addEventListener('click', () => { elPout.classList.add('hidden'); setup(); });
+
+        const openConfig = (context) => {
+            menuContext = context;
+            elStout.classList.remove('hidden');
+            document.querySelectorAll('.cfg-key').forEach(el => {
+                const bindId = el.getAttribute('data-bind');
+                el.textContent = formatKeyDisplay(BINDS[bindId]);
+                el.classList.remove('waiting');
+            });
+            activeListenTarget = null;
+        };
+
+        document.getElementById('cfg-open-btn').addEventListener('click', () => openConfig('main'));
+        document.getElementById('p-cfg-btn').addEventListener('click', () => openConfig('pause'));
+
+        document.querySelectorAll('.cfg-key').forEach(box => {
+            box.addEventListener('click', (e) => {
+                document.querySelectorAll('.cfg-key').forEach(el => el.classList.remove('waiting'));
+                activeListenTarget = e.target;
+                e.target.classList.add('waiting');
+            });
+        });
+
+        // in all of these lines... you found me?! ugh... leave me alone
+
+        elCfgSave.addEventListener('click', () => {
+            localStorage.setItem('t_binds', JSON.stringify(BINDS));
+            updateKeyLabels();
+            elStout.classList.add('hidden');
+        });
+
+        window.addEventListener('keydown', e => { 
+            const pressed = e.key.toLowerCase();
+
+            if (activeListenTarget) {
+                e.preventDefault();
+                const targetBind = activeListenTarget.getAttribute('data-bind');
+                BINDS[targetBind] = e.key; 
+                activeListenTarget.textContent = formatKeyDisplay(e.key);
+                activeListenTarget.classList.remove('waiting');
+                activeListenTarget = null;
+                return;
+            }
+
+            if (!active && !isPaused && elStout.classList.contains('hidden')) {
+                if (pressed === BINDS.start.toLowerCase()) {
+                    e.preventDefault();
+                    setup();
+                    return;
+                }
+            }
+
+            if (pressed === BINDS.pause.toLowerCase()) {
+                if (active) togglePause();
+                return;
+            }
+
+            if (isPaused) return;
+
+            let triggeredIdx = -1;
+            for(let i = 0; i < 4; i++) {
+                if (pressed === BINDS[`lane${i}`].toLowerCase()) { triggeredIdx = i; break; }
+            }
+
+            if(triggeredIdx !== -1 && !e.repeat) { 
+                if (isAuto) { if (readyToDie) fail(triggeredIdx); return; }
+                lanes[triggeredIdx].classList.add('act'); keys[triggeredIdx].classList.add('act'); processInput(triggeredIdx); 
+            }
+        });
+
+        // really? you're that obsessed with me?
+
+        window.addEventListener('keyup', e => { 
+            if (isPaused) return;
+            const released = e.key.toLowerCase();
+            for(let i = 0; i < 4; i++) {
+                if (released === BINDS[`lane${i}`].toLowerCase()) {
+                    lanes[i].classList.remove('act'); keys[i].classList.remove('act');
+                }
+            }
+        });
+
+        const startHold = (e) => {
+            e.preventDefault();
+            if (active) return;
+            elBtn.classList.add('holding');
+            holdTmo = setTimeout(() => {
+                isAuto = true;
+                elBtn.classList.remove('holding');
+                setup();
+            }, 5000);
+        };
+
+        const cancelHold = () => {
+            clearTimeout(holdTmo);
+            if (!active) elBtn.classList.remove('holding');
+        };
+
+        elBtn.addEventListener('mousedown', startHold);
+        elBtn.addEventListener('touchstart', startHold, { passive: false });
+        window.addEventListener('mouseup', cancelHold);
+        window.addEventListener('touchend', cancelHold);
+        elBtn.addEventListener('click', (e) => { e.stopPropagation(); if(!isAuto && !active) setup(); });
+
+        const GlobalZap = (e) => {
+            if (active && isAuto && readyToDie && !isPaused) {
+                e.preventDefault();
+                e.stopPropagation();
+                fail(0);
+            }
+        };
+        window.addEventListener('mousedown', GlobalZap, { capture: true });
+        window.addEventListener('touchstart', GlobalZap, { capture: true, passive: false });
+        
+        // alright, this is the last one. please, just let me be.
+
+        const handleTouch = (e) => {
+            if (!active || isAuto || isPaused) return; e.preventDefault();
+            const changedTouches = e.changedTouches;
+            for (let i = 0; i < changedTouches.length; i++) {
+                const touch = changedTouches[i];
+                const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                const lane = targetEl ? targetEl.closest('.l') : null;
+                if (lane) {
+                    const idx = parseInt(lane.dataset.i);
+                    lane.classList.add('act'); keys[idx].classList.add('act');
+                    processInput(idx);
+                }
+            }
+        };
+
+        const clearTouch = (e) => {
+            if (isAuto || isPaused) return;
+            const activeIndices = new Set();
+            for (let i = 0; i < e.touches.length; i++) {
+                const el = document.elementFromPoint(e.touches[i].clientX, e.touches[i].clientY);
+                const lane = el ? el.closest('.l') : null;
+                if (lane) activeIndices.add(parseInt(lane.dataset.i));
+            }
+            lanes.forEach((l, i) => { if (!activeIndices.has(i)) { l.classList.remove('act'); keys[i].classList.remove('act'); }});
+        };
+
+        elLanes.addEventListener('touchstart', handleTouch, { passive: false });
+        elLanes.addEventListener('touchend', clearTouch, { passive: false });
+        elLanes.addEventListener('mousedown', e => { 
+            if (!active || isAuto || isPaused) return;
+            const l = e.target.closest('.l'); 
+            if(l) { const i = parseInt(l.dataset.i); l.classList.add('act'); keys[i].classList.add('act'); processInput(i); }
+        });
+        window.addEventListener('mouseup', () => lanes.forEach((l,i) => { l.classList.remove('act'); keys[i].classList.remove('act'); }));
+
+        loop = setInterval(() => {
+            fCnt++; const now = performance.now(); const d = now - lastSmp;
+            if (d >= 500) { elFps.textContent = `FPS: ${Math.round((fCnt * 1000) / d)}`; fCnt = 0; lastSmp = now; }
+            lastTick = now;
+        }, 0);
+    </script>
+</body>
+</html>
