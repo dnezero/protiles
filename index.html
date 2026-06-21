@@ -110,6 +110,7 @@
         let H, LINE, score = 0, hi = localStorage.getItem('t_hi') || 0, active = false, isPaused = false, spd = 1, tiles = [], loop, pTmo;
         let isAuto = false, usedAuto = false, holdTmo, readyToDie = false;
         let menuContext = 'main';
+        let startPressTime = 0;
         
         let fCnt = 0, lastSmp = performance.now(), lastTick = performance.now();
 
@@ -121,8 +122,6 @@
         const resize = () => { H = window.innerHeight; LINE = H - 65; };
         window.addEventListener('resize', resize); resize();
         elHsc.textContent = hi;
-
-        // this was written with one hand, wonder why? :P
 
         const formatKeyDisplay = (val) => {
             if (val === ' ') return 'SPACE';
@@ -281,8 +280,6 @@
             });
         });
 
-        // in all of these lines... you found me?! ugh... leave me alone
-
         elCfgSave.addEventListener('click', () => {
             localStorage.setItem('t_binds', JSON.stringify(BINDS));
             updateKeyLabels();
@@ -328,8 +325,6 @@
             }
         });
 
-        // really? you're that obsessed with me?
-
         window.addEventListener('keyup', e => { 
             if (isPaused) return;
             const released = e.key.toLowerCase();
@@ -341,26 +336,35 @@
         });
 
         const startHold = (e) => {
-            e.preventDefault();
             if (active) return;
+            e.preventDefault();
+            startPressTime = Date.now();
             elBtn.classList.add('holding');
             holdTmo = setTimeout(() => {
                 isAuto = true;
                 elBtn.classList.remove('holding');
                 setup();
+                holdTmo = null;
             }, 5000);
         };
 
         const cancelHold = () => {
-            clearTimeout(holdTmo);
-            if (!active) elBtn.classList.remove('holding');
+            if (!elBtn.classList.contains('holding')) return;
+            elBtn.classList.remove('holding');
+            if (holdTmo) {
+                clearTimeout(holdTmo);
+                holdTmo = null;
+                if (Date.now() - startPressTime < 500) {
+                    if (!isAuto && !active) setup();
+                }
+            }
         };
 
         elBtn.addEventListener('mousedown', startHold);
         elBtn.addEventListener('touchstart', startHold, { passive: false });
         window.addEventListener('mouseup', cancelHold);
         window.addEventListener('touchend', cancelHold);
-        elBtn.addEventListener('click', (e) => { e.stopPropagation(); if(!isAuto && !active) setup(); });
+        window.addEventListener('touchcancel', cancelHold);
 
         const GlobalZap = (e) => {
             if (active && isAuto && readyToDie && !isPaused) {
@@ -372,8 +376,6 @@
         window.addEventListener('mousedown', GlobalZap, { capture: true });
         window.addEventListener('touchstart', GlobalZap, { capture: true, passive: false });
         
-        // alright, this is the last one. please, just let me be.
-
         const handleTouch = (e) => {
             if (!active || isAuto || isPaused) return; e.preventDefault();
             const changedTouches = e.changedTouches;
